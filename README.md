@@ -2,6 +2,8 @@
 
 Allows users to control [pico borg reverse motor controllers](https://www.piborg.org/picoborgrev/) over I2C using the [gobot.io](https://gobot.io) robotic framework.
 
+[![GoDoc](https://godoc.org/github.com/joek/picoborgrev?status.svg)](http://godoc.org/github.com/joek/picoborgrev)
+
 # Installation on Raspberry
 
 The library was tested on Raspberry PI. It should run on other Platforms provided by [gobot.io](https://gobot.io/documentation/platforms/) too.
