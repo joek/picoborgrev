@@ -55,6 +55,16 @@ const (
 
 )
 
+// RevDriver pico borg rev driver interace
+type RevDriver interface {
+	Name() string
+	Connection() gobot.Connection
+	Start() []error
+	Halt() []error
+	SetMotorA(float32) error
+	SetMotorB(float32) error
+}
+
 // Driver struct
 type Driver struct {
 	name       string

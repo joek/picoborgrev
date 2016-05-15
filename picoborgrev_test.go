@@ -9,7 +9,9 @@ import (
 
 var _ = Describe("Picoborgrev", func() {
 	It("Creates a new Driver instance", func() {
-		Ω(NewDriver(newI2cTestAdaptor("adaptor"), "Test", 0x44)).Should(BeAssignableToTypeOf(&Driver{}))
+		var d RevDriver
+		d = NewDriver(newI2cTestAdaptor("adaptor"), "Test", 0x44)
+		Ω(d).Should(BeAssignableToTypeOf(&Driver{}))
 	})
 
 	Describe("Driver", func() {
