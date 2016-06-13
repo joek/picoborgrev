@@ -2,6 +2,7 @@ package picoborgrev_test
 
 import (
 	. "github.com/joek/picoborgrev"
+	. "github.com/joek/picoborgrev/revtesthelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,21 +11,21 @@ import (
 var _ = Describe("Picoborgrev", func() {
 	It("Creates a new Driver instance", func() {
 		var d RevDriver
-		d = NewDriver(newI2cTestAdaptor("adaptor"), "Test", 0x44)
+		d = NewDriver(NewI2cTestAdaptor("adaptor"), "Test", 0x44)
 		Ω(d).Should(BeAssignableToTypeOf(&Driver{}))
 	})
 
 	Describe("Driver", func() {
 		var driver *Driver
-		var adaptor *i2cTestAdaptor
+		var adaptor *I2cTestAdaptor
 		BeforeEach(func() {
-			adaptor = newI2cTestAdaptor("adaptor")
+			adaptor = NewI2cTestAdaptor("adaptor")
 			driver = NewDriver(adaptor, "test", 0x44)
 		})
 
 		It("should respond to getter", func() {
 			Ω(driver.Name()).Should(Equal("test"))
-			Ω(driver.Connection()).Should(BeAssignableToTypeOf(newI2cTestAdaptor("adaptor")))
+			Ω(driver.Connection()).Should(BeAssignableToTypeOf(NewI2cTestAdaptor("adaptor")))
 		})
 
 		It("should start", func() {
@@ -64,6 +65,60 @@ var _ = Describe("Picoborgrev", func() {
 			Ω(err).Should(Not(BeNil()))
 		})
 
+		It("should get epo state", func() {
+			var res []byte
+			adaptor.I2cWriteImpl = func(i int, b []byte) error {
+				res = b
+				return nil
+			}
+			adaptor.I2cReadImpl = func(i int, l int) ([]byte, error) {
+				b := make([]byte, l-1, l-1)
+				b[1] = byte(0x1)
+				return b, nil
+			}
+
+			b, _ := driver.GetEPO()
+
+			Ω(b).Should(BeTrue())
+			Ω(res[0]).Should(Equal(byte(0x11)))
+		})
+
+		It("StopAllMotors hould Stop all motors at halt", func() {
+			var res []byte
+			adaptor.I2cWriteImpl = func(i int, b []byte) error {
+				res = b
+				return nil
+			}
+
+			driver.StopAllMotors()
+
+			Ω(res[0]).Should(Equal(byte(9)))
+		})
+
+		It("Halt should Stop all motors at halt", func() {
+			var res []byte
+			adaptor.I2cWriteImpl = func(i int, b []byte) error {
+				res = b
+				return nil
+			}
+
+			driver.Halt()
+
+			Ω(res[0]).Should(Equal(byte(9)))
+		})
+
+		It("should reset EPO", func() {
+			var res []byte
+			adaptor.I2cWriteImpl = func(i int, b []byte) error {
+				res = b
+				return nil
+			}
+
+			driver.ResetEPO()
+
+			Ω(res[0]).Should(Equal(byte(0x10)))
+		})
+
 		It("should SetMotorA", func() {
 			var res []byte
 			adaptor.I2cWriteImpl = func(i int, b []byte) error {
@@ -98,40 +153,3 @@ var _ = Describe("Picoborgrev", func() {
 		})
 	})
 })
-
-type i2cTestAdaptor struct {
-	name         string
-	I2cReadImpl  func(i int, l int) ([]byte, error)
-	I2cWriteImpl func(int, []byte) error
-	I2cStartImpl func() error
-}
-
-func (t *i2cTestAdaptor) I2cStart(int) (err error) {
-	return t.I2cStartImpl()
-}
-func (t *i2cTestAdaptor) I2cRead(i int, l int) (data []byte, err error) {
-	return t.I2cReadImpl(i, l)
-}
-func (t *i2cTestAdaptor) I2cWrite(i int, b []byte) (err error) {
-	return t.I2cWriteImpl(i, b)
-}
-func (t *i2cTestAdaptor) Name() string             { return t.name }
-func (t *i2cTestAdaptor) Connect() (errs []error)  { return }
-func (t *i2cTestAdaptor) Finalize() (errs []error) { return }
-
-func newI2cTestAdaptor(name string) *i2cTestAdaptor {
-	return &i2cTestAdaptor{
-		name: name,
-		I2cReadImpl: func(i int, l int) ([]byte, error) {
-			b := make([]byte, l, l)
-			b[1] = 0x15
-			return b, nil
-		},
-		I2cWriteImpl: func(i int, b []byte) error {
-			return nil
-		},
-		I2cStartImpl: func() error {
-			return nil
-		},
-	}
-}
