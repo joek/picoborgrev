@@ -62,6 +62,8 @@ type RevDriver interface {
 	Connection() gobot.Connection
 	Start() []error
 	Halt() []error
+	ResetEPO() error
+	GetEPO() (bool, error)
 	SetMotorA(float32) error
 	SetMotorB(float32) error
 }

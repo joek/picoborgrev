@@ -65,7 +65,7 @@ var _ = Describe("Picoborgrev", func() {
 			Ω(err).Should(Not(BeNil()))
 		})
 
-		It("should get epo state", func() {
+		It("should get EPO state true", func() {
 			var res []byte
 			adaptor.I2cWriteImpl = func(i int, b []byte) error {
 				res = b
@@ -80,6 +80,24 @@ var _ = Describe("Picoborgrev", func() {
 			b, _ := driver.GetEPO()
 
 			Ω(b).Should(BeTrue())
+			Ω(res[0]).Should(Equal(byte(0x11)))
+		})
+
+		It("should get EPO state false", func() {
+			var res []byte
+			adaptor.I2cWriteImpl = func(i int, b []byte) error {
+				res = b
+				return nil
+			}
+			adaptor.I2cReadImpl = func(i int, l int) ([]byte, error) {
+				b := make([]byte, l-1, l-1)
+				b[1] = byte(0x0)
+				return b, nil
+			}
+
+			b, _ := driver.GetEPO()
+
+			Ω(b).Should(BeFalse())
 			Ω(res[0]).Should(Equal(byte(0x11)))
 		})
 
