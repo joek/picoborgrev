@@ -70,9 +70,7 @@ func main() {
 # Open Topics
 The PicoBorg Reverse is offering a lot of functionality. Currently only the setMotor(A/B) functions are implemented. Based on the piborg python sample library the following functions are missing:
 
-- ResetEpo
 - SetMotors
-- MotorsOff
 - GetMotorA
 - GetMotorB
 - SetEpoIgnore
