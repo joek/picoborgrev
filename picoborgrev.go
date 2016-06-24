@@ -66,6 +66,7 @@ type RevDriver interface {
 	GetEPO() (bool, error)
 	SetMotorA(float32) error
 	SetMotorB(float32) error
+	StopAllMotors() error
 }
 
 // Driver struct
