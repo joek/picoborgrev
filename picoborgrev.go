@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/i2c"
+	multierror "github.com/hashicorp/go-multierror"
+	"gobot.io/x/gobot"
+	"gobot.io/x/gobot/drivers/i2c"
 )
 
 var _ gobot.Driver = (*Driver)(nil)
@@ -60,8 +61,8 @@ const (
 type RevDriver interface {
 	Name() string
 	Connection() gobot.Connection
-	Start() []error
-	Halt() []error
+	Start() error
+	Halt() error
 	ResetEPO() error
 	GetEPO() (bool, error)
 	SetMotorA(float32) error
@@ -90,41 +91,43 @@ func NewDriver(a i2c.I2c, name string, address int) *Driver {
 // Name returns the name of the device
 func (h *Driver) Name() string { return h.name }
 
+// SetName of the device
+func (h *Driver) SetName(n string) { h.name = n }
+
 // Connection returns the connection
 func (h *Driver) Connection() gobot.Connection { return h.connection.(gobot.Connection) }
 
 // Start initialized the picoborgrev
-func (h *Driver) Start() (errs []error) {
+func (h *Driver) Start() (errs error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	if err := h.connection.I2cStart(h.address); err != nil {
-		return []error{err}
+		return err
 	}
 	h.connection.I2cWrite(h.address, []byte{commandGetID})
 	d, err := h.connection.I2cRead(h.address, i2cMaxLen)
 	if err != nil {
-		return []error{err}
+		return err
 	}
 
 	if len(d) == i2cMaxLen {
 		if d[1] != i2cIDPicoborgRev {
 			err := fmt.Errorf("Found a device but it is not a PicoBorg Revers (ID %X instead of %X)", d[1], i2cIDPicoborgRev)
-			return []error{err}
+			return err
 		}
 	} else {
 		err := fmt.Errorf("Device not found")
-		return []error{err}
+		return err
 	}
 	return
 }
 
 // Halt stops all motors
-func (h *Driver) Halt() (errs []error) {
-	var errors = make([]error, 0)
+func (h *Driver) Halt() (errs error) {
 	err := h.StopAllMotors()
 	if err != nil {
-		return append(errors, err)
+		multierror.Append(errs, err)
 	}
 	return nil
 }

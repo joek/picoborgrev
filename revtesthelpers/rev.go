@@ -1,6 +1,6 @@
 package revtesthelpers
 
-import "github.com/hybridgroup/gobot"
+import "gobot.io/x/gobot"
 
 type I2cTestAdaptor struct {
 	name         string
@@ -18,9 +18,10 @@ func (t *I2cTestAdaptor) I2cRead(i int, l int) (data []byte, err error) {
 func (t *I2cTestAdaptor) I2cWrite(i int, b []byte) (err error) {
 	return t.I2cWriteImpl(i, b)
 }
-func (t *I2cTestAdaptor) Name() string             { return t.name }
-func (t *I2cTestAdaptor) Connect() (errs []error)  { return }
-func (t *I2cTestAdaptor) Finalize() (errs []error) { return }
+func (t *I2cTestAdaptor) Name() string           { return t.name }
+func (t *I2cTestAdaptor) SetName(n string)       { t.name = n }
+func (t *I2cTestAdaptor) Connect() (errs error)  { return }
+func (t *I2cTestAdaptor) Finalize() (errs error) { return }
 
 func NewI2cTestAdaptor(name string) *I2cTestAdaptor {
 	return &I2cTestAdaptor{
@@ -46,7 +47,7 @@ type FakeRevDriver struct {
 	SetMotorBImpl     func(float32) error
 	StartImpl         func() []error
 	StopAllMotorsImpl func() error
-	HaltImpl          func() []error
+	HaltImpl          func() error
 	ResetEPOImpl      func() error
 	GetEPOImpl        func() (bool, error)
 }
@@ -67,7 +68,7 @@ func NewFakeRevDriver() *FakeRevDriver {
 		StopAllMotorsImpl: func() error {
 			return nil
 		},
-		HaltImpl: func() []error {
+		HaltImpl: func() error {
 			return nil
 		},
 		GetEPOImpl: func() (bool, error) {
@@ -91,7 +92,7 @@ func (b *FakeRevDriver) Start() []error {
 	return b.StartImpl()
 }
 
-func (b *FakeRevDriver) Halt() []error {
+func (b *FakeRevDriver) Halt() error {
 	return b.HaltImpl()
 }
 
@@ -130,9 +131,10 @@ func (t *i2cTestAdaptor) I2cRead(i int, l int) (data []byte, err error) {
 func (t *i2cTestAdaptor) I2cWrite(i int, b []byte) (err error) {
 	return t.I2cWriteImpl(i, b)
 }
-func (t *i2cTestAdaptor) Name() string             { return t.name }
-func (t *i2cTestAdaptor) Connect() (errs []error)  { return }
-func (t *i2cTestAdaptor) Finalize() (errs []error) { return }
+func (t *i2cTestAdaptor) Name() string           { return t.name }
+func (t *i2cTestAdaptor) SetName(n string)       { t.name = n }
+func (t *i2cTestAdaptor) Connect() (errs error)  { return }
+func (t *i2cTestAdaptor) Finalize() (errs error) { return }
 
 func newI2cTestAdaptor(name string) *i2cTestAdaptor {
 	return &i2cTestAdaptor{

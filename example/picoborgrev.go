@@ -3,9 +3,9 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/raspi"
 	"github.com/joek/picoborgrev"
+	"gobot.io/x/gobot"
+	"gobot.io/x/gobot/platforms/raspi"
 )
 
 func main() {

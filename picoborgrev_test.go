@@ -50,7 +50,7 @@ var _ = Describe("Picoborgrev", func() {
 
 			err := driver.Start()
 
-			Ω(err).Should(Not(BeNil()))
+			Ω(err).ShouldNot(BeNil())
 		})
 
 		It("should fail on wrong response", func() {
@@ -62,7 +62,7 @@ var _ = Describe("Picoborgrev", func() {
 
 			err := driver.Start()
 
-			Ω(err).Should(Not(BeNil()))
+			Ω(err).ShouldNot(BeNil())
 		})
 
 		It("should get EPO state true", func() {
