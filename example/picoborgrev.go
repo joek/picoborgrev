@@ -9,9 +9,7 @@ import (
 )
 
 func main() {
-	gbot := gobot.NewGobot()
-
-	r := raspi.NewRaspiAdaptor("raspi")
+	r := raspi.NewAdaptor()
 	rev := picoborgrev.NewDriver(r, "rev", 10)
 
 	work := func() {
@@ -28,7 +26,5 @@ func main() {
 		work,
 	)
 
-	gbot.AddRobot(robot)
-
-	gbot.Start()
+	robot.Start()
 }
