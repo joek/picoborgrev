@@ -45,7 +45,7 @@ type FakeRevDriver struct {
 	connection        gobot.Connection
 	SetMotorAImpl     func(float32) error
 	SetMotorBImpl     func(float32) error
-	StartImpl         func() []error
+	StartImpl         func() error
 	StopAllMotorsImpl func() error
 	HaltImpl          func() error
 	ResetEPOImpl      func() error
@@ -62,7 +62,7 @@ func NewFakeRevDriver() *FakeRevDriver {
 		SetMotorBImpl: func(power float32) error {
 			return nil
 		},
-		StartImpl: func() []error {
+		StartImpl: func() error {
 			return nil
 		},
 		StopAllMotorsImpl: func() error {
@@ -88,7 +88,7 @@ func (b *FakeRevDriver) SetMotorB(power float32) error {
 	return b.SetMotorBImpl(power)
 }
 
-func (b *FakeRevDriver) Start() []error {
+func (b *FakeRevDriver) Start() error {
 	return b.StartImpl()
 }
 
