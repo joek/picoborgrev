@@ -14,6 +14,7 @@ import (
 var _ gobot.Driver = (*Driver)(nil)
 
 const (
+	picoborgAddress     = 0x44 // Default address
 	pwmMax              = 255  // Max pwm value
 	i2cMaxLen           = 4    // Max len of I2C message
 	i2cIDPicoborgRev    = 0x15 // i2c id of picoborg rev board
@@ -73,19 +74,34 @@ type RevDriver interface {
 // Driver struct
 type Driver struct {
 	name       string
-	connection i2c.I2c
-	address    int
-	lock       sync.Mutex
+	connector  i2c.Connector
+	connection i2c.Connection
+	i2c.Config
+	lock sync.Mutex
 }
 
 // NewDriver creates a new driver with specified name and i2c interface
-func NewDriver(a i2c.I2c, name string, address int) *Driver {
-	return &Driver{
-		name:       name,
-		connection: a,
-		address:    address,
-		lock:       sync.Mutex{},
+//
+// Params:
+//		conn Connector - the Adaptor to use with this Driver
+//
+// Optional params:
+//		i2c.WithBus(int):	bus to use with this driver
+//		i2c.WithAddress(int):	address to use with this driver
+//
+//
+func NewDriver(a i2c.Connector, options ...func(i2c.Config)) *Driver {
+	d := &Driver{
+		name:      gobot.DefaultName("PicoBorg"),
+		connector: a,
+		Config:    i2c.NewConfig(),
+		lock:      sync.Mutex{},
 	}
+
+	for _, option := range options {
+		option(d)
+	}
+	return d
 }
 
 // Name returns the name of the device
@@ -98,22 +114,27 @@ func (h *Driver) SetName(n string) { h.name = n }
 func (h *Driver) Connection() gobot.Connection { return h.connection.(gobot.Connection) }
 
 // Start initialized the picoborgrev
-func (h *Driver) Start() (errs error) {
+func (h *Driver) Start() (err error) {
+	bus := h.GetBusOrDefault(h.connector.GetDefaultBus())
+	address := h.GetAddressOrDefault(picoborgAddress)
 	h.lock.Lock()
 	defer h.lock.Unlock()
-
-	if err := h.connection.I2cStart(h.address); err != nil {
-		return err
-	}
-	h.connection.I2cWrite(h.address, []byte{commandGetID})
-	d, err := h.connection.I2cRead(h.address, i2cMaxLen)
+	h.connection, err = h.connector.GetConnection(address, bus)
 	if err != nil {
 		return err
 	}
 
-	if len(d) == i2cMaxLen {
-		if d[1] != i2cIDPicoborgRev {
-			err := fmt.Errorf("Found a device but it is not a PicoBorg Revers (ID %X instead of %X)", d[1], i2cIDPicoborgRev)
+	h.connection.Write([]byte{commandGetID})
+	data := []byte{0, 0, 0, 0}
+
+	read, err := h.connection.Read(data)
+	if err != nil {
+		return err
+	}
+
+	if read == i2cMaxLen {
+		if data[1] != i2cIDPicoborgRev {
+			err := fmt.Errorf("Found a device but it is not a PicoBorg Revers (ID %X instead of %X)", data[1], i2cIDPicoborgRev)
 			return err
 		}
 	} else {
@@ -137,7 +158,7 @@ func (h *Driver) StopAllMotors() error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	err := h.connection.I2cWrite(h.address, []byte{commandAllOFF})
+	err := h.connection.WriteByte(byte(commandAllOFF))
 	return err
 }
 
@@ -146,7 +167,7 @@ func (h *Driver) ResetEPO() error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	err := h.connection.I2cWrite(h.address, []byte{commandResetEPO})
+	err := h.connection.WriteByte(byte(commandResetEPO))
 	return err
 }
 
@@ -155,17 +176,17 @@ func (h *Driver) GetEPO() (bool, error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	err := h.connection.I2cWrite(h.address, []byte{commandGetEPO})
+	err := h.connection.WriteByte(byte(commandGetEPO))
 	if err != nil {
 		return false, err
 	}
 
-	d, err := h.connection.I2cRead(h.address, i2cMaxLen)
+	data, err := h.connection.ReadByte()
 	if err != nil {
 		return false, err
 	}
 
-	if int(d[1]) == commandValueOff {
+	if int(data) == commandValueOff {
 		return false, nil
 	}
 	return true, nil
@@ -186,7 +207,7 @@ func (h *Driver) SetMotorA(power float32) error {
 		pwm = int(pwmMax * power)
 	}
 
-	err := h.connection.I2cWrite(h.address, []byte{command, byte(pwm)})
+	err := h.connection.WriteByteData(byte(command), byte(pwm))
 	if err != nil {
 		return err
 	}
@@ -207,7 +228,7 @@ func (h *Driver) SetMotorB(power float32) error {
 		pwm = int(pwmMax * power)
 	}
 
-	err := h.connection.I2cWrite(h.address, []byte{command, byte(pwm)})
+	err := h.connection.WriteByteData(byte(command), byte(pwm))
 	if err != nil {
 		return err
 	}

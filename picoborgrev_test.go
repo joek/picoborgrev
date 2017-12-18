@@ -11,41 +11,52 @@ import (
 var _ = Describe("Picoborgrev", func() {
 	It("Creates a new Driver instance", func() {
 		var d RevDriver
-		d = NewDriver(NewI2cTestAdaptor("adaptor"), "Test", 0x44)
+		d = NewDriver(NewI2cTestAdaptor(NewI2cFakeConnection()))
 		Ω(d).Should(BeAssignableToTypeOf(&Driver{}))
 	})
 
 	Describe("Driver", func() {
+		var connection *I2cFakeConnection
 		var driver *Driver
 		var adaptor *I2cTestAdaptor
 		BeforeEach(func() {
-			adaptor = NewI2cTestAdaptor("adaptor")
-			driver = NewDriver(adaptor, "test", 0x44)
+			connection = NewI2cFakeConnection()
+			adaptor = NewI2cTestAdaptor(connection)
+			driver = NewDriver(adaptor)
 		})
 
 		It("should respond to getter", func() {
-			Ω(driver.Name()).Should(Equal("test"))
-			Ω(driver.Connection()).Should(BeAssignableToTypeOf(NewI2cTestAdaptor("adaptor")))
+			connection.ReadImpl = func(p []byte) (n int, err error) {
+				p[1] = 0x15
+				return 4, nil
+			}
+			driver.Start()
+			Ω(driver.Name()).Should(ContainSubstring("PicoBorg"))
+			Ω(driver.Connection()).Should(BeAssignableToTypeOf(connection))
 		})
 
 		It("should start", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
+			var data []byte
+			connection.WriteImpl = func(b []byte) (int, error) {
+				data = b
+				return 1, nil
 			}
 
+			connection.ReadImpl = func(p []byte) (n int, err error) {
+				p[1] = 0x15
+				return 4, nil
+			}
 			err := driver.Start()
 
 			Ω(err).Should(BeNil())
-			Ω(res).Should(Equal([]byte{0x99}))
+			Ω(len(data)).Should(Equal(1))
+			Ω(data).Should(Equal([]byte{0x99}))
 		})
 
 		It("should fail on wrong board", func() {
-			adaptor.I2cReadImpl = func(i int, l int) ([]byte, error) {
-				b := make([]byte, l, l)
-				b[1] = 0x16
-				return b, nil
+			connection.ReadImpl = func(p []byte) (n int, err error) {
+				p[1] = 0x16
+				return 1, nil
 			}
 
 			err := driver.Start()
@@ -54,120 +65,130 @@ var _ = Describe("Picoborgrev", func() {
 		})
 
 		It("should fail on wrong response", func() {
-			adaptor.I2cReadImpl = func(i int, l int) ([]byte, error) {
-				b := make([]byte, l-1, l-1)
-				b[1] = 0x15
-				return b, nil
+			connection.ReadImpl = func(p []byte) (n int, err error) {
+				p[1] = 0x15
+				return 1, nil
 			}
 
 			err := driver.Start()
 
 			Ω(err).ShouldNot(BeNil())
 		})
+		Describe("Start Driver", func() {
+			BeforeEach(func() {
+				connection.ReadImpl = func(p []byte) (n int, err error) {
+					p[1] = 0x16
+					return 1, nil
+				}
+				driver.Start()
+			})
 
-		It("should get EPO state true", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
-			adaptor.I2cReadImpl = func(i int, l int) ([]byte, error) {
-				b := make([]byte, l-1, l-1)
-				b[1] = byte(0x1)
-				return b, nil
-			}
+			It("should get EPO state true", func() {
+				var data byte
+				connection.WriteByteImpl = func(b byte) error {
+					data = b
+					return nil
+				}
+				connection.ReadByteImpl = func() (p byte, err error) {
+					p = 0x1
+					return p, nil
+				}
 
-			b, _ := driver.GetEPO()
+				b, _ := driver.GetEPO()
 
-			Ω(b).Should(BeTrue())
-			Ω(res[0]).Should(Equal(byte(0x11)))
-		})
+				Ω(b).Should(BeTrue())
+				Ω(data).Should(Equal(byte(0x11)))
+			})
 
-		It("should get EPO state false", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
-			adaptor.I2cReadImpl = func(i int, l int) ([]byte, error) {
-				b := make([]byte, l-1, l-1)
-				b[1] = byte(0x0)
-				return b, nil
-			}
+			It("should get EPO state false", func() {
+				var data byte
+				connection.WriteByteImpl = func(b byte) error {
+					data = b
+					return nil
+				}
+				connection.ReadByteImpl = func() (p byte, err error) {
+					p = 0x0
+					return p, nil
+				}
 
-			b, _ := driver.GetEPO()
+				b, _ := driver.GetEPO()
 
-			Ω(b).Should(BeFalse())
-			Ω(res[0]).Should(Equal(byte(0x11)))
-		})
+				Ω(b).Should(BeFalse())
+				Ω(data).Should(Equal(byte(0x11)))
+			})
 
-		It("StopAllMotors hould Stop all motors at halt", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
+			It("StopAllMotors hould Stop all motors at halt", func() {
+				var data byte
+				connection.WriteByteImpl = func(b byte) error {
+					data = b
+					return nil
+				}
 
-			driver.StopAllMotors()
+				driver.StopAllMotors()
 
-			Ω(res[0]).Should(Equal(byte(9)))
-		})
+				Ω(data).Should(Equal(byte(9)))
+			})
 
-		It("Halt should Stop all motors at halt", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
+			It("Halt should Stop all motors at halt", func() {
+				var data byte
+				connection.WriteByteImpl = func(b byte) error {
+					data = b
+					return nil
+				}
 
-			driver.Halt()
+				driver.Halt()
 
-			Ω(res[0]).Should(Equal(byte(9)))
-		})
+				Ω(data).Should(Equal(byte(9)))
+			})
 
-		It("should reset EPO", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
+			It("should reset EPO", func() {
+				var data byte
+				connection.WriteByteImpl = func(b byte) error {
+					data = b
+					return nil
+				}
 
-			driver.ResetEPO()
+				driver.ResetEPO()
 
-			Ω(res[0]).Should(Equal(byte(0x10)))
-		})
+				Ω(data).Should(Equal(byte(0x10)))
+			})
 
-		It("should SetMotorA", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
+			It("should SetMotorA", func() {
+				var data uint8
+				var c uint8
+				connection.WriteByteDataImpl = func(reg uint8, val uint8) error {
+					data = val
+					c = reg
+					return nil
+				}
 
-			driver.SetMotorA(0.25)
+				driver.SetMotorA(0.25)
 
-			Ω(res[0]).Should(Equal(byte(3)))
-			Ω(res[1]).Should(Equal(byte(63)))
+				Ω(c).Should(Equal(byte(3)))
+				Ω(data).Should(Equal(byte(63)))
 
-			driver.SetMotorA(-0.25)
-			Ω(res[0]).Should(Equal(byte(4)))
-			Ω(res[1]).Should(Equal(byte(63)))
-		})
-		It("should SetMotorB", func() {
-			var res []byte
-			adaptor.I2cWriteImpl = func(i int, b []byte) error {
-				res = b
-				return nil
-			}
+				driver.SetMotorA(-0.25)
+				Ω(c).Should(Equal(byte(4)))
+				Ω(data).Should(Equal(byte(63)))
+			})
+			It("should SetMotorB", func() {
+				var data uint8
+				var c uint8
+				connection.WriteByteDataImpl = func(reg uint8, val uint8) error {
+					data = val
+					c = reg
+					return nil
+				}
 
-			driver.SetMotorB(0.25)
+				driver.SetMotorB(0.25)
 
-			Ω(res[0]).Should(Equal(byte(6)))
-			Ω(res[1]).Should(Equal(byte(63)))
+				Ω(c).Should(Equal(byte(6)))
+				Ω(data).Should(Equal(byte(63)))
 
-			driver.SetMotorB(-0.25)
-			Ω(res[0]).Should(Equal(byte(7)))
-			Ω(res[1]).Should(Equal(byte(63)))
+				driver.SetMotorB(-0.25)
+				Ω(c).Should(Equal(byte(7)))
+				Ω(data).Should(Equal(byte(63)))
+			})
 		})
 	})
 })
