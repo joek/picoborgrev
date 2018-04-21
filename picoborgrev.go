@@ -117,9 +117,10 @@ func (h *Driver) Connection() gobot.Connection { return h.connection.(gobot.Conn
 func (h *Driver) Start() (err error) {
 	bus := h.GetBusOrDefault(h.connector.GetDefaultBus())
 	address := h.GetAddressOrDefault(picoborgAddress)
+	h.connection, err = h.connector.GetConnection(address, bus)
+
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	h.connection, err = h.connector.GetConnection(address, bus)
 	if err != nil {
 		return err
 	}
