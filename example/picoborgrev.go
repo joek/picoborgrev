@@ -10,7 +10,7 @@ import (
 
 func main() {
 	r := raspi.NewAdaptor()
-	rev := picoborgrev.NewDriver(r, "rev", 10)
+	rev := picoborgrev.NewDriver(r)
 
 	work := func() {
 		rev.SetMotorA(0.3)

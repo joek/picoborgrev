@@ -124,6 +124,10 @@ func NewFakeRevDriver() *FakeRevDriver {
 	}
 }
 
+func (b *FakeRevDriver) SetName(n string) {
+	b.name = n
+}
+
 func (b *FakeRevDriver) SetMotorA(power float32) error {
 	return b.SetMotorAImpl(power)
 }
