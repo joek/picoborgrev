@@ -149,7 +149,7 @@ func (b *FakeRevDriver) Name() string {
 }
 
 func (b *FakeRevDriver) Connection() gobot.Connection {
-	return b.connection
+	return b.connection.(gobot.Connection)
 }
 
 func (b *FakeRevDriver) ResetEPO() error {
